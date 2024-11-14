@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "599160843228",
+    "project_id": "flutter-credit-card-app-14b14",
+    "storage_bucket": "flutter-credit-card-app-14b14.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:599160843228:android:935f2ffed8e0d576d4bd19",
+        "android_client_info": {
+          "package_name": "com.example.creditapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDZau4f4JQcnBXbEKIxX8FTREGp1UYuiUk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
