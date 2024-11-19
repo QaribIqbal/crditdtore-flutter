@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter_credit_card/flutter_credit_card.dart';
 
 class AddCardScreen extends StatefulWidget {
   const AddCardScreen({super.key});
@@ -14,140 +13,104 @@ class AddCardScreenState extends State<AddCardScreen> {
   final String userId = FirebaseAuth.instance.currentUser!.uid;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  String cardNumber = '';
   String expiryDate = '';
-  String cardHolderName = '';
-  String cvvCode = '';
-  bool isCvvFocused = false;
-  String selectedBank = '';  // To store the selected bank
+  String selectedBank = '';
+  String selectedCard = '';
+  String selectedCardImage = ''; // Image path for selected card
 
   final GlobalKey<FormState> formKey = GlobalKey<FormState>();
 
-  // List to hold the banks fetched from Firestore
   List<Map<String, dynamic>> banks = [];
-  bool isLoading = true;  // Track loading state
+  List<Map<String, dynamic>> creditCards = [];
+  bool isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _loadBanks();  // Load the bank data when the screen is initialized
+    _loadBanks();
   }
 
-  // Fetch bank data from Firestore
   Future<void> _loadBanks() async {
     try {
-      // Show a loading indicator
       setState(() {
         isLoading = true;
       });
 
-      // Get the list of banks from Firestore
       QuerySnapshot snapshot = await _firestore.collection('banks').get();
-
-      // Check if data exists
-      if (snapshot.docs.isEmpty) {
-        debugPrint("No banks found in Firestore.");
-      } else {
-        debugPrint("Banks fetched from Firestore: ${snapshot.docs.length}");
-      }
 
       setState(() {
         banks = snapshot.docs.map((doc) {
           return {
-            'name': doc['name'] as String,        // Cast to String
-            'imageUrl': doc['imageUrl'] as String, // Cast to String
+            'id': doc.id,
+            'name': doc['name'],
+            'imageUrl': doc['imageUrl'],
           };
         }).toList();
-        isLoading = false;  // Hide loading indicator
+        isLoading = false;
       });
     } catch (e) {
-      debugPrint("Error fetching banks: $e");
+      print("Error fetching banks: $e");
       setState(() {
         isLoading = false;
       });
     }
   }
 
-  // Function to show the bank selection dialog
-  void _selectBank() async {
-    final Map<String, String>? selected = await showDialog<Map<String, String>>(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Select a Bank'),
-          content: SingleChildScrollView(
-            child: Column(
-              children: banks.map((bank) {
-                return ListTile(
-                  leading: Image.network(
-                    bank['imageUrl']!, // Load image from URL
-                    width: 40,
-                    height: 40,
-                    errorBuilder: (context, error, stackTrace) {
-                      return const Icon(Icons.account_balance, size: 40);
-                    },
-                  ),
-                  title: Text(bank['name']!),
-                  onTap: () {
-                    Navigator.pop(context, bank); // Return the selected bank
-                  },
-                );
-              }).toList(),
-            ),
-          ),
-        );
-      },
-    );
+  void _loadCreditCards(String bankName) async {
+    try {
+      final bankSnapshot = await FirebaseFirestore.instance
+          .collection('banks')
+          .where('name', isEqualTo: bankName)
+          .limit(1)
+          .get();
 
-    if (selected != null && selected.isNotEmpty) {
+      if (bankSnapshot.docs.isEmpty) {
+        print('Bank not found!');
+        return;
+      }
+
+      final bankData = bankSnapshot.docs.first.data();
+      final List<String> cardIds = List<String>.from(bankData['creditCards'] ?? []);
+
+      if (cardIds.isEmpty) {
+        print('No credit cards found for this bank.');
+        return;
+      }
+
+      List<Map<String, dynamic>> creditCards = [];
+      for (String cardId in cardIds) {
+        final creditCardSnapshot = await FirebaseFirestore.instance
+            .collection('credit_cards')
+            .doc(cardId)
+            .get();
+
+        if (creditCardSnapshot.exists) {
+          creditCards.add(creditCardSnapshot.data()!);
+        }
+      }
+
       setState(() {
-        selectedBank = selected['name']!;  // Store the selected bank name
+        this.creditCards = creditCards;
       });
+    } catch (e) {
+      print('Error fetching credit cards: $e');
     }
   }
 
-  // Function to save the card details to Firestore
   Future<void> _saveCard() async {
-    if (formKey.currentState!.validate()) {
+    if (expiryDate.isNotEmpty && selectedBank.isNotEmpty && selectedCard.isNotEmpty) {
       try {
         await _firestore.collection('users/$userId/cards').add({
-          'cardNumber': cardNumber,
           'expiryDate': expiryDate,
-          'cardHolderName': cardHolderName,
-          'cvvCode': cvvCode,
-          'selectedBank': selectedBank,  // Save selected bank
+          'selectedBank': selectedBank,
+          'selectedCard': selectedCard,
         });
         if (mounted) {
-          Navigator.pop(context); // Navigate back after saving
+          Navigator.pop(context);
         }
       } catch (e) {
-        debugPrint("Error saving card: $e");
+        print("Error saving card: $e");
       }
-    }
-  }
-
-  // Method to add banks to Firestore programmatically
-  Future<void> _addBanksToFirestore() async {
-    // Create a list of banks with their names and image URLs
-   List<Map<String, String>> bankData = [
-  // Systemically Important Banks
-  {'name': 'Habib Bank Limited (HBL)', 'imageUrl': ''},
-  {'name': 'National Bank of Pakistan (NBP)', 'imageUrl': ''},
-  {'name': 'United Bank Limited (UBL)', 'imageUrl': ''},
-];
-
-
-    try {
-      // Loop through the bank data and add each bank to Firestore
-      for (var bank in bankData) {
-        await _firestore.collection('banks').add({
-          'name': bank['name'],
-          'imageUrl': bank['imageUrl'],
-        });
-      }
-      debugPrint("Banks added successfully!");
-    } catch (e) {
-      debugPrint("Error adding banks to Firestore: $e");
     }
   }
 
@@ -160,11 +123,38 @@ class AddCardScreenState extends State<AddCardScreen> {
       body: SingleChildScrollView(
         child: Column(
           children: <Widget>[
-            // Bank selection UI
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: GestureDetector(
-                onTap: _selectBank,
+                onTap: () async {
+                  final Map<String, dynamic>? bank = await showDialog<Map<String, dynamic>>(
+                    context: context,
+                    builder: (context) {
+                      return AlertDialog(
+                        title: const Text('Select a Bank'),
+                        content: SingleChildScrollView(
+                          child: Column(
+                            children: banks.map((bank) {
+                              return ListTile(
+                                title: Text(bank['name']),
+                                onTap: () {
+                                  Navigator.pop(context, bank);
+                                },
+                              );
+                            }).toList(),
+                          ),
+                        ),
+                      );
+                    },
+                  );
+
+                  if (bank != null) {
+                    setState(() {
+                      selectedBank = bank['name'];
+                      _loadCreditCards(bank['name']);
+                    });
+                  }
+                },
                 child: Container(
                   padding: const EdgeInsets.symmetric(vertical: 15.0, horizontal: 20.0),
                   decoration: BoxDecoration(
@@ -173,11 +163,8 @@ class AddCardScreenState extends State<AddCardScreen> {
                   ),
                   child: Row(
                     children: [
-                      if (selectedBank.isNotEmpty)
-                        const Padding(
-                          padding: EdgeInsets.only(right: 10.0),
-                          child: Icon(Icons.account_balance, size: 30),
-                        ),
+                      const Icon(Icons.account_balance, size: 30),
+                      const SizedBox(width: 10),
                       Text(
                         selectedBank.isEmpty ? 'Select Bank' : selectedBank,
                         style: const TextStyle(fontSize: 18),
@@ -188,65 +175,51 @@ class AddCardScreenState extends State<AddCardScreen> {
               ),
             ),
             const SizedBox(height: 20),
-            
-            // Show loading indicator if banks are loading
-            if (isLoading) 
-              const Center(child: CircularProgressIndicator()),
-
-            // Show the banks if available
-            if (!isLoading && banks.isNotEmpty)
-              ElevatedButton(
-                onPressed: _selectBank, // Show the bank selection dialog
-                child: const Text("Select Bank"),
+            if (creditCards.isNotEmpty)
+              Column(
+                children: creditCards.map((card) {
+                  return ListTile(
+                    leading: Image.asset(
+                    //  'assets/images/credit-card-gold.jpg', // Replace with dynamic asset loading if needed
+                      card['imageUrl'],
+                      width: 40,
+                      height: 40,
+                      errorBuilder: (context, error, stackTrace) {
+                        return const Icon(Icons.credit_card, size: 40);
+                      },
+                    ),
+                    title: Text(card['name']),
+                    onTap: () {
+                      setState(() {
+                        selectedCard = card['name'];
+                        selectedCardImage = card['imageUrl']; //'assets/images/credit-card-gold.png'; // Update dynamically
+                      });
+                    },
+                  );
+                }).toList(),
               ),
-            
-            if (banks.isEmpty && !isLoading)
-              const Text("No banks available", style: TextStyle(fontSize: 16)),
-
             const SizedBox(height: 20),
-
-            // Display the card UI with entered data live
-            CreditCardWidget(
-              cardNumber: cardNumber,
-              expiryDate: expiryDate,
-              cardHolderName: cardHolderName.isNotEmpty ? cardHolderName : 'Card Holder',
-              cvvCode: cvvCode,
-              showBackView: isCvvFocused,
-              obscureCardNumber: false,
-              obscureCardCvv: false,
-              onCreditCardWidgetChange: (CreditCardBrand brand) {},
-            ),
+            if (selectedCard.isNotEmpty)
+              Column(
+                children: [
+                  Text(
+                    'Selected Card: $selectedCard',
+                    style: const TextStyle(fontSize: 16),
+                  ),
+                  const SizedBox(height: 10),
+                  Image.asset(
+                    //  'assets/images/credit-card-gold.jpg',
+                   selectedCardImage,
+                    width: 200,
+                    height: 120,
+                    fit: BoxFit.cover,
+                  ),
+                ],
+              ),
             const SizedBox(height: 20),
-            
-            // Form to enter card details
-            CreditCardForm(
-              formKey: formKey,
-              cardNumber: cardNumber,
-              expiryDate: expiryDate,
-              cardHolderName: cardHolderName,
-              cvvCode: cvvCode,
-              onCreditCardModelChange: (CreditCardModel data) {
-                setState(() {
-                  cardNumber = data.cardNumber;
-                  expiryDate = data.expiryDate;
-                  cardHolderName = data.cardHolderName;
-                  cvvCode = data.cvvCode;
-                  isCvvFocused = data.isCvvFocused;
-                });
-              },
-            ),
-            const SizedBox(height: 20),
-            
             ElevatedButton(
-              onPressed: selectedBank.isEmpty ? null : _saveCard, // Disable if no bank is selected
+              onPressed: selectedBank.isEmpty || selectedCard.isEmpty || expiryDate.isEmpty ? null : _saveCard,
               child: const Text("Save Card"),
-            ),
-            const SizedBox(height: 20),
-            
-            // Button to add banks to Firestore
-            ElevatedButton(
-              onPressed: _addBanksToFirestore, // Call the method to add banks
-              child: const Text("Add Banks to Firestore"),
             ),
           ],
         ),

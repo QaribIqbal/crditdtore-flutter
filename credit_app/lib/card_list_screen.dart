@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'add_card_screen.dart';  // Ensure this is correctly imported
-import 'package:flutter_credit_card/flutter_credit_card.dart';
+import 'add_card_screen.dart';
 
 class CardListScreen extends StatefulWidget {
   const CardListScreen({super.key});
@@ -21,24 +20,24 @@ class CardListScreenState extends State<CardListScreen> {
         .collection('users/$userId/cards')
         .snapshots()
         .map((snapshot) {
-          return snapshot.docs.map((doc) => {
+      return snapshot.docs.map((doc) => {
             'id': doc.id, // Get document ID from Firestore
             ...doc.data() // Include all the document data
           }).toList();
-        });
+    });
   }
 
   // Delete card from Firestore
   Future<void> _deleteCard(String cardId) async {
     try {
       await _firestore.collection('users/$userId/cards').doc(cardId).delete();
-      if (mounted) { // Ensure the widget is still mounted
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Card deleted successfully!')),
         );
       }
     } catch (e) {
-      if (mounted) { // Ensure the widget is still mounted
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to delete card: $e')),
         );
@@ -57,14 +56,14 @@ class CardListScreenState extends State<CardListScreen> {
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => const AddCardScreen()),  // Navigate to Add Card Screen
+                MaterialPageRoute(builder: (context) => const AddCardScreen()),
               );
             },
           ),
         ],
       ),
       body: StreamBuilder<List<Map<String, dynamic>>>(
-        stream: _getCardsStream(), // Listen to Firestore collection changes
+        stream: _getCardsStream(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
@@ -78,46 +77,51 @@ class CardListScreenState extends State<CardListScreen> {
             return const Center(child: Text('No saved cards.'));
           }
 
-          // Display the list of cards
           final cardList = snapshot.data!;
           return LayoutBuilder(
             builder: (context, constraints) {
               double cardWidth = constraints.maxWidth * 0.8;
-              double cardHeight = cardWidth * 0.6;
 
               return ListView.builder(
-                padding: const EdgeInsets.only(top: 20),  // Add space between first card and AppBar
+                padding: const EdgeInsets.only(top: 20),
                 itemCount: cardList.length,
                 itemBuilder: (context, index) {
                   final card = cardList[index];
-                  final cardId = card['id']; // Get the Firestore document ID
+                  final cardId = card['id'];
+
+                  // Use default value for expiryDate if null
+                  final expiryDate = card['expiryDate'] ?? 'MM/YY';
 
                   return Card(
-                    elevation: 8, // Gives the 3D effect
-                    margin: const EdgeInsets.symmetric(vertical: 20, horizontal: 15), // Added space between cards
+                    elevation: 8,
+                    margin: const EdgeInsets.symmetric(
+                        vertical: 20, horizontal: 15),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(15),
                     ),
                     child: Column(
                       children: [
-                        SizedBox(
+                        // Display asset image
+                        Image.asset(
+                          'assets/images/credit-card-gold.jpg', // Replace with your asset image path
                           width: cardWidth,
-                          height: cardHeight,
-                          child: CreditCardWidget(
-                            cardNumber: card['cardNumber'],
-                            expiryDate: card['expiryDate'],
-                            cardHolderName: card['cardHolderName'] ?? '',
-                            cvvCode: card['cvvCode'] ?? '',
-                            showBackView: false, // Show front side of the card by default
-                            onCreditCardWidgetChange: (CreditCardBrand brand) {}, // Add required parameter
-                            obscureCardCvv: false, // Show full CVV number
-                            obscureCardNumber: false, // Show full card number
-                            isHolderNameVisible: true, // Ensure cardholder name is visible
+                          height: cardWidth * 0.6,
+                          fit: BoxFit.cover,
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          child: Text(
+                            'Expiry Date: $expiryDate',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.black54,
+                            ),
                           ),
                         ),
                         IconButton(
                           icon: const Icon(Icons.delete, color: Colors.red),
-                          onPressed: () => _deleteCard(cardId), // Pass the Firestore document ID
+                          onPressed: () => _deleteCard(cardId),
                         ),
                       ],
                     ),
