@@ -17,6 +17,7 @@ class AddCardScreenState extends State<AddCardScreen> {
   String selectedBank = '';
   String selectedCard = '';
   String selectedCardImage = ''; // Image path for selected card
+  String errorMessage = ''; // For showing error messages
 
   final GlobalKey<FormState> formKey = GlobalKey<FormState>();
 
@@ -97,8 +98,44 @@ class AddCardScreenState extends State<AddCardScreen> {
     }
   }
 
+  // Function to validate expiry date
+  bool _isValidExpiryDate(String date) {
+    // Check if date is in MM/YY format
+    final regex = RegExp(r'^(0[1-9]|1[0-2])\/([0-9]{2})$');
+    if (!regex.hasMatch(date)) {
+      setState(() {
+        errorMessage = 'Invalid expiry date format. Please use MM/YY.';
+      });
+      return false;
+    }
+
+    // Check if the expiry date is in the future
+    final now = DateTime.now();
+    final parts = date.split('/');
+    final month = int.parse(parts[0]);
+    final year = int.parse(parts[1]);
+    final expiryDate = DateTime(2000 + year, month);
+
+    if (expiryDate.isBefore(now)) {
+      setState(() {
+        errorMessage = 'Expiry date cannot be in the past.';
+      });
+      return false;
+    }
+
+    setState(() {
+      errorMessage = '';
+    });
+    return true;
+  }
+
   Future<void> _saveCard() async {
     if (expiryDate.isNotEmpty && selectedBank.isNotEmpty && selectedCard.isNotEmpty) {
+      // Validate the expiry date before saving the card
+      if (!_isValidExpiryDate(expiryDate)) {
+        return;
+      }
+
       try {
         await _firestore.collection('users/$userId/cards').add({
           'expiryDate': expiryDate,
@@ -179,8 +216,7 @@ class AddCardScreenState extends State<AddCardScreen> {
               Column(
                 children: creditCards.map((card) {
                   return ListTile(
-                    leading: Image.asset(
-                    //  'assets/images/credit-card-gold.jpg', // Replace with dynamic asset loading if needed
+                    leading: Image.network(
                       card['imageUrl'],
                       width: 40,
                       height: 40,
@@ -189,11 +225,47 @@ class AddCardScreenState extends State<AddCardScreen> {
                       },
                     ),
                     title: Text(card['name']),
-                    onTap: () {
+                    onTap: () async {
                       setState(() {
                         selectedCard = card['name'];
-                        selectedCardImage = card['imageUrl']; //'assets/images/credit-card-gold.png'; // Update dynamically
+                        selectedCardImage = card['imageUrl'];
                       });
+
+                      // Show dialog to add expiry date
+                      final String? date = await showDialog<String>(
+                        context: context,
+                        builder: (context) {
+                          String expiryInput = '';
+                          return AlertDialog(
+                            title: const Text('Enter Expiry Date'),
+                            content: TextField(
+                              keyboardType: TextInputType.datetime,
+                              decoration: const InputDecoration(
+                                labelText: 'MM/YY',
+                              ),
+                              onChanged: (value) {
+                                expiryInput = value;
+                              },
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, null),
+                                child: const Text('Cancel'),
+                              ),
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, expiryInput),
+                                child: const Text('OK'),
+                              ),
+                            ],
+                          );
+                        },
+                      );
+
+                      if (date != null && date.isNotEmpty) {
+                        setState(() {
+                          expiryDate = date;
+                        });
+                      }
                     },
                   );
                 }).toList(),
@@ -207,14 +279,28 @@ class AddCardScreenState extends State<AddCardScreen> {
                     style: const TextStyle(fontSize: 16),
                   ),
                   const SizedBox(height: 10),
-                  Image.asset(
-                    //  'assets/images/credit-card-gold.jpg',
-                   selectedCardImage,
+                  Image.network(
+                    selectedCardImage,
                     width: 200,
                     height: 120,
                     fit: BoxFit.cover,
                   ),
+                  const SizedBox(height: 10),
+                  if (expiryDate.isNotEmpty)
+                    Text(
+                      'Expiry Date: $expiryDate',
+                      style: const TextStyle(fontSize: 16),
+                    ),
                 ],
+              ),
+            const SizedBox(height: 20),
+            if (errorMessage.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Text(
+                  errorMessage,
+                  style: const TextStyle(color: Colors.red),
+                ),
               ),
             const SizedBox(height: 20),
             ElevatedButton(

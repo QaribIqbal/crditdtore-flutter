@@ -1,3 +1,4 @@
+import 'package:credit_app/add_card_screen.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 //import 'package:firebase_core/firebase_core.dart';
@@ -22,7 +23,8 @@ class MyApp extends StatelessWidget {
         primarySwatch: Colors.blue,
       ),
       debugShowCheckedModeBanner: false,
-      home:   const LoginScreen(),
+      home:  const LoginScreen(),
+             //const AddCardScreen(),
     );
   }
 }
