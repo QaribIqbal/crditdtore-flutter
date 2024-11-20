@@ -98,9 +98,7 @@ class AddCardScreenState extends State<AddCardScreen> {
     }
   }
 
-  // Function to validate expiry date
   bool _isValidExpiryDate(String date) {
-    // Check if date is in MM/YY format
     final regex = RegExp(r'^(0[1-9]|1[0-2])\/([0-9]{2})$');
     if (!regex.hasMatch(date)) {
       setState(() {
@@ -109,7 +107,6 @@ class AddCardScreenState extends State<AddCardScreen> {
       return false;
     }
 
-    // Check if the expiry date is in the future
     final now = DateTime.now();
     final parts = date.split('/');
     final month = int.parse(parts[0]);
@@ -131,7 +128,6 @@ class AddCardScreenState extends State<AddCardScreen> {
 
   Future<void> _saveCard() async {
     if (expiryDate.isNotEmpty && selectedBank.isNotEmpty && selectedCard.isNotEmpty) {
-      // Validate the expiry date before saving the card
       if (!_isValidExpiryDate(expiryDate)) {
         return;
       }
@@ -141,6 +137,7 @@ class AddCardScreenState extends State<AddCardScreen> {
           'expiryDate': expiryDate,
           'selectedBank': selectedBank,
           'selectedCard': selectedCard,
+          'selectedCardImage': selectedCardImage,
         });
         if (mounted) {
           Navigator.pop(context);
@@ -162,54 +159,37 @@ class AddCardScreenState extends State<AddCardScreen> {
           children: <Widget>[
             Padding(
               padding: const EdgeInsets.all(16.0),
-              child: GestureDetector(
-                onTap: () async {
-                  final Map<String, dynamic>? bank = await showDialog<Map<String, dynamic>>(
-                    context: context,
-                    builder: (context) {
-                      return AlertDialog(
-                        title: const Text('Select a Bank'),
-                        content: SingleChildScrollView(
-                          child: Column(
-                            children: banks.map((bank) {
-                              return ListTile(
-                                title: Text(bank['name']),
-                                onTap: () {
-                                  Navigator.pop(context, bank);
+              child: isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : DropdownButton<String>(
+                      value: selectedBank.isEmpty ? null : selectedBank,
+                      hint: const Text('Select a Bank'),
+                      onChanged: (String? newValue) {
+                        setState(() {
+                          selectedBank = newValue!;
+                          _loadCreditCards(selectedBank);
+                        });
+                      },
+                      items: banks.map<DropdownMenuItem<String>>((Map<String, dynamic> bank) {
+                        return DropdownMenuItem<String>(
+                          value: bank['name'],
+                          child: Row(
+                            children: [
+                              Image.network(
+                                bank['imageUrl'],
+                                width: 40,
+                                height: 40,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return const Icon(Icons.account_balance, size: 40);
                                 },
-                              );
-                            }).toList(),
+                              ),
+                              const SizedBox(width: 10),
+                              Text(bank['name']),
+                            ],
                           ),
-                        ),
-                      );
-                    },
-                  );
-
-                  if (bank != null) {
-                    setState(() {
-                      selectedBank = bank['name'];
-                      _loadCreditCards(bank['name']);
-                    });
-                  }
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 15.0, horizontal: 20.0),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[200],
-                    borderRadius: BorderRadius.circular(8.0),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.account_balance, size: 30),
-                      const SizedBox(width: 10),
-                      Text(
-                        selectedBank.isEmpty ? 'Select Bank' : selectedBank,
-                        style: const TextStyle(fontSize: 18),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+                        );
+                      }).toList(),
+                    ),
             ),
             const SizedBox(height: 20),
             if (creditCards.isNotEmpty)
@@ -228,10 +208,9 @@ class AddCardScreenState extends State<AddCardScreen> {
                     onTap: () async {
                       setState(() {
                         selectedCard = card['name'];
-                        selectedCardImage = card['imageUrl'];
+                        selectedCardImage = card['imageUrl']; // Set selected card image
                       });
 
-                      // Show dialog to add expiry date
                       final String? date = await showDialog<String>(
                         context: context,
                         builder: (context) {
