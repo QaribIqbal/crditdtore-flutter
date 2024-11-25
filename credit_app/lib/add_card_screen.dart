@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'card_list_screen.dart'; // Ensure this is the correct import for CardListScreen
 
 class AddCardScreen extends StatefulWidget {
   const AddCardScreen({super.key});
@@ -139,8 +140,13 @@ class AddCardScreenState extends State<AddCardScreen> {
           'selectedCard': selectedCard,
           'selectedCardImage': selectedCardImage,
         });
+
         if (mounted) {
-          Navigator.pop(context);
+          // Navigate to CardListScreen instead of popping back
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const CardListScreen()),
+          );
         }
       } catch (e) {
         print("Error saving card: $e");

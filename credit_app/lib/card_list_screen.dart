@@ -36,6 +36,7 @@ class CardListScreenState extends State<CardListScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Your Cards'),
+         automaticallyImplyLeading: false,
         actions: [
           IconButton(
             icon: const Icon(Icons.add),
