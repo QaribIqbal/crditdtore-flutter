@@ -46,7 +46,9 @@ class MyApp extends StatelessWidget {
         primarySwatch: Colors.blue,
       ),
       debugShowCheckedModeBanner: false,
-      home: const LoginScreen(),
+      home:// const LoginScreen(),
+     // const AddCardScreen(),
+    const CardListScreen(),
     );
   }
 }

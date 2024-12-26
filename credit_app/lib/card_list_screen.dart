@@ -1,7 +1,8 @@
+import 'dart:async';
+import 'dart:convert';
 import 'package:credit_app/add_card_screen.dart';
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:http/http.dart' as http;
 
 class CardListScreen extends StatefulWidget {
   const CardListScreen({super.key});
@@ -11,23 +12,59 @@ class CardListScreen extends StatefulWidget {
 }
 
 class CardListScreenState extends State<CardListScreen> {
-  final String userId = FirebaseAuth.instance.currentUser!.uid;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final String userId = "676ab3e27835727941172573"; // Replace with actual user ID
+  final String baseUrl = "http://localhost:3000"; // Replace with your API base URL
 
-  late Stream<QuerySnapshot> userCardsStream;
+  late StreamController<List<Map<String, dynamic>>> _cardStreamController;
+  late Timer _pollingTimer;
+  List<Map<String, dynamic>> _userCards = [];
 
   @override
   void initState() {
     super.initState();
-    // Set up the real-time listener to monitor changes to the cards collection.
-    userCardsStream = _firestore.collection('users/$userId/cards').snapshots();
+    _cardStreamController = StreamController.broadcast();
+    _startPolling();
   }
 
-  Future<void> _deleteCard(String cardId) async {
+  @override
+  void dispose() {
+    _pollingTimer.cancel();
+    _cardStreamController.close();
+    super.dispose();
+  }
+
+  void _startPolling() {
+    // Fetch data every 5 seconds
+    _pollingTimer = Timer.periodic(const Duration(seconds: 5), (_) async {
+      final cards = await fetchUserCards();
+      _cardStreamController.add(cards); // Add data to the stream
+      setState(() {
+        _userCards = cards;
+      });
+    });
+  }
+
+  Future<List<Map<String, dynamic>>> fetchUserCards() async {
     try {
-      await _firestore.collection('users/$userId/cards').doc(cardId).delete();
+      final response = await http.get(Uri.parse('$baseUrl/users/$userId/selectedcards'));
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+
+        return data.map((card) {
+          return {
+            'id': card['cardId'] ?? '', // Default to empty string if null
+            'expiryDate': card['expiryDate'] ?? 'N/A',
+            'selectedBank': card['bankName'] ?? 'Unknown Bank',
+            'selectedCard': card['cardName'] ?? 'Unnamed Card',
+            'selectedCardImage': card['cardImageUrl'] ?? '', // Default to empty if no image URL
+          };
+        }).toList();
+      } else {
+        throw Exception('Failed to fetch cards: ${response.body}');
+      }
     } catch (e) {
-      print("Error deleting card: $e");
+      print("Error fetching cards: $e");
+      return [];
     }
   }
 
@@ -36,21 +73,24 @@ class CardListScreenState extends State<CardListScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Your Cards'),
-         automaticallyImplyLeading: false,
+        automaticallyImplyLeading: false,
         actions: [
           IconButton(
             icon: const Icon(Icons.add),
-            onPressed: () {
-              Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (context) => const AddCardScreen())); // Navigate to Add Card screen
+            onPressed: () async {
+              // Navigate to AddCardScreen and refresh data after return
+              await Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const AddCardScreen()),
+              );
+              // Trigger manual refresh after adding a card
+              _pollingTimer.tick;
             },
           ),
         ],
       ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: userCardsStream, // Listen to changes in the cards collection
+      body: StreamBuilder<List<Map<String, dynamic>>>(
+        stream: _cardStreamController.stream,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
@@ -60,41 +100,42 @@ class CardListScreenState extends State<CardListScreen> {
             return Center(child: Text('Error: ${snapshot.error}'));
           }
 
-          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          if (!snapshot.hasData || snapshot.data!.isEmpty) {
             return const Center(child: Text('No cards saved yet.'));
           }
 
-          final userCards = snapshot.data!.docs.map((doc) {
-            return {
-              'id': doc.id,
-              'expiryDate': doc['expiryDate'],
-              'selectedBank': doc['selectedBank'],
-              'selectedCard': doc['selectedCard'],
-              'selectedCardImage': doc['selectedCardImage'],
-            };
-          }).toList();
+          final userCards = snapshot.data!;
 
           return ListView.builder(
             itemCount: userCards.length,
             itemBuilder: (context, index) {
               final card = userCards[index];
+
               return Card(
                 margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
                 elevation: 5,
                 child: ListTile(
-                  leading: Image.network(
-                    card['selectedCardImage'], // Card image URL
-                    width: 40,
-                    height: 40,
-                    errorBuilder: (context, error, stackTrace) {
-                      return const Icon(Icons.credit_card, size: 40);
-                    },
-                  ),
-                  title: Text(card['selectedCard']), // Card name
-                  subtitle: Text('Bank: ${card['selectedBank']}\nExpiry: ${card['expiryDate']}'),
+                  leading: card['selectedCardImage']!.isNotEmpty
+                      ? Image.network(
+                          card['selectedCardImage']!,
+                          width: 40,
+                          height: 40,
+                          errorBuilder: (context, error, stackTrace) {
+                            return const Icon(Icons.credit_card, size: 40);
+                          },
+                        )
+                      : const Icon(Icons.credit_card, size: 40),
+                  title: Text(card['selectedCard']!),
+                  subtitle: Text(
+                      'Bank: ${card['selectedBank']}\nExpiry: ${card['expiryDate']}'),
                   trailing: IconButton(
                     icon: const Icon(Icons.delete),
-                    onPressed: () => _deleteCard(card['id']), // Delete card
+                    onPressed: () async {
+                      await deleteCard(card['id']); // Call delete API
+                      setState(() {
+                        _userCards.removeWhere((element) => element['id'] == card['id']);
+                      });
+                    },
                   ),
                 ),
               );
@@ -104,4 +145,19 @@ class CardListScreenState extends State<CardListScreen> {
       ),
     );
   }
+
+  Future<void> deleteCard(String id) async {
+    try {
+      final response = await http.delete(Uri.parse('$baseUrl/users/$userId/cards/$id'));
+      if (response.statusCode == 200) {
+        print("Card deleted successfully.");
+      } else {
+        print("Failed to delete card: ${response.body}");
+      }
+    } catch (e) {
+      print("Error deleting card: $e");
+    }
+  }
 }
+
+
