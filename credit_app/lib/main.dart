@@ -1,5 +1,6 @@
 import 'package:credit_app/add_card_screen.dart';
 import 'package:credit_app/card_list_screen.dart';
+import 'package:credit_app/discount_offers_screen.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -47,8 +48,8 @@ class MyApp extends StatelessWidget {
       ),
       debugShowCheckedModeBanner: false,
       home:// const LoginScreen(),
-     // const AddCardScreen(),
-    const CardListScreen(),
+      DiscountOffersScreen(),
+    //const CardListScreen(),
     );
   }
 }
