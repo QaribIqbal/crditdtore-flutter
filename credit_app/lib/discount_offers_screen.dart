@@ -15,11 +15,12 @@ class _DiscountOffersScreenState extends State<DiscountOffersScreen> {
   List<dynamic> offers = [];
   List<dynamic> filteredOffers = [];
   String selectedType = "";
+    String selectedCity = "";
   List<String> selectedCards = [];
   List<String> category=[];
 //  List<String> types = ['Health', 'Food', 'Electronics', 'Clothing']; // Example types
   List<String> types = []; // Example types
-
+ List<String> cities=["All","Lahore","Faisalabad","Islamabad","Karachi","Multan","Sargodah","Peshawar"];
 
   @override
   void initState() {
@@ -66,121 +67,135 @@ catch(e)
       print("Error: $e");
     }
   }
-
-  void applyFilters() {
-    setState(() {
-      filteredOffers = offers
-          .where((offer) => (selectedType.isEmpty || offer['type'] == selectedType) &&
-              (selectedCards.isEmpty || selectedCards.contains(offer['card'])))
-          .toList();
-
-      filteredOffers.sort((a, b) {
-        if (selectedCards.isNotEmpty && a['restaurant'] == b['restaurant']) {
-          return b['discount'].compareTo(a['discount']);
-        }
-        return b['discount'].compareTo(a['discount']);
-      });
-    });
+  void openFilterPopup() {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.all(30.0),
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                DropdownButtonFormField<String>(
+                  
+                  isExpanded: true,
+                  decoration: InputDecoration(labelText: 'Type' ,border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12), // Rounded corners
+                  ),),
+                  value: selectedType.isEmpty ? null : selectedType,
+                  items: types.map((type) {
+                    return DropdownMenuItem(value: type, child: Text(type));
+                  }).toList(),
+                  onChanged: (value) {
+                    setState(() {
+                      selectedType = value ?? "";
+                    });
+                 //   fetchOffers();
+                  },
+                ),
+                const SizedBox(height: 8),
+                DropdownButtonFormField<String>(
+                  isExpanded: true,
+                  decoration: InputDecoration(labelText: 'City',border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),),
+                  value: selectedCity.isEmpty ? null : selectedCity,
+                  items: cities.map((city) {
+                    return DropdownMenuItem(value: city, child: Text(city));
+                  }).toList(),
+                  onChanged: (value) {
+                    setState(() {
+                      selectedCity = value ?? "";
+                    });
+                 //   fetchOffers();
+                  },
+                ),
+                const SizedBox(height: 8),
+                Center(
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 38,top:38),
+                    child: SizedBox(
+                        width: MediaQuery.of(context).size.width * 0.4, // 80%
+                      child: ElevatedButton(
+                        onPressed: () {
+                          fetchOffers();
+                         // applyFilters();
+                          Navigator.pop(context);
+                        },
+                        style:ElevatedButton.styleFrom(backgroundColor: Colors.lightBlue,),
+                        child: const Text('Apply',style:TextStyle(color: Colors.white)),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
-
+  
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Discount Offers',
         style: TextStyle(color: Colors.white)),
-        backgroundColor:Colors.lightBlue
+        backgroundColor:Colors.lightBlue,
+        actions:[  Padding(
+            padding: const EdgeInsets.all(3.0),
+            child:ElevatedButton.icon(
+               label: const Text("Filter Offers"),
+                icon: const Icon(Icons.filter_alt),
+                onPressed: openFilterPopup,
+              ),
+          ),]
+       
       ),
-      body: Column(
-        children: [
-          // Search and filter bar
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Container(
-                constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width),
-                child: Row(
-                  children: [
-                    Expanded(
-                      flex:2,
-                      child: DropdownButtonFormField<String>(   
-                        isExpanded: true,
-                        decoration: const InputDecoration(labelText: 'Type'),
-                        value: selectedType.isEmpty ? null : selectedType,
-                        items: types
-                            .map((type) => DropdownMenuItem(
-                                  value: type,
-                                  child: Text(type),
-                                ))
-                            .toList(),
-                        onChanged: (value) {
-                          setState(() {
-                            selectedType = value ?? "";
-                          });
-                          //applyFilters();//My API
-                          fetchOffers();
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: TextField(
-                        decoration: const InputDecoration(
-                          labelText: 'Card Filter (comma separated)',
-                        ),
-                        onSubmitted: (value) {
-                          setState(() {
-                            selectedCards = value.split(',').map((e) => e.trim()).toList();
-                          });
-                        //  applyFilters(); MY API
-                        fetchOffers();
-                        },
-                      ),
-                    ),
-                  ],
+      body: Padding(
+        padding: const EdgeInsets.only(top:5),
+        child: Column(
+          children: [
+            // Offers Grid
+            Expanded(
+              child: GridView.builder(
+                gridDelegate:const SliverGridDelegateWithMaxCrossAxisExtent(
+                  maxCrossAxisExtent:700,
+                  mainAxisExtent: 300,
+                  crossAxisSpacing: 5,
+                  mainAxisSpacing: 7,
                 ),
-              ),
-            ),
-          ),
-
-          // Offers Grid
-          Expanded(
-            child: GridView.builder(
-              gridDelegate:const SliverGridDelegateWithMaxCrossAxisExtent(
-                maxCrossAxisExtent:700,
-                mainAxisExtent: 300,
-                crossAxisSpacing: 5,
-                mainAxisSpacing: 7,
-              ),
-              itemCount: filteredOffers.length,
-              itemBuilder: (context, index) {
-                final offer = filteredOffers[index];
-                return Card(
-                  elevation: 4,
-                  child: Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          offer['location']['name'],
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
+                itemCount: filteredOffers.length,
+                itemBuilder: (context, index) {
+                  final offer = filteredOffers[index];
+                  return Card(
+                    elevation: 4,
+                    child: Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            offer['location']['name'],
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
-                        ),
-                       Text('offer: ${offer['name']}'),
-                        Text('Discount: ${offer['discountPercentage']}%'),
-                        Text('Location: ${offer['location']['city']}'),
-                       Text('Address:${offer['location']['address']}')
-                      ],
+                         Text('offer: ${offer['name']}'),
+                          Text('Discount: ${offer['discountPercentage']}%'),
+                          Text('Location: ${offer['location']['city']}'),
+                         Text('Address:${offer['location']['address']}')
+                        ],
+                      ),
                     ),
-                  ),
-                );
-              },
+                  );
+                },
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
