@@ -151,14 +151,15 @@ class AddCardScreenState extends State<AddCardScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Add Card'),
+        title: const Text('Add Card', style:TextStyle(color: Colors.blue , fontSize: 35 ,fontWeight: FontWeight.w400)),
+       // backgroundColor: Colors.blue,
       ),
       body: SingleChildScrollView(
         child: Center(
           child: Padding(
             padding: const EdgeInsets.all(16.0),
             child: ConstrainedBox(
-              constraints: BoxConstraints(maxWidth: 600), // Ensure a max width for larger screens
+              constraints: const BoxConstraints(maxWidth: 600), // Ensure a max width for larger screens
               child: Column(
                 children: <Widget>[
                   isLoading

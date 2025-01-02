@@ -119,15 +119,15 @@ async function addOffers() {
             "startDate": "2024-12-20T00:00:00Z",
             "endDate": "2025-01-05T23:59:59Z",
             "description": "Get 20% off on all menu items during the holiday season.",
-            "category": ["676ebeac416f24332abd76ab"], // Replace with actual category ObjectId
+            "category": ["677539c26668532c16e10d80"], // Replace with actual category ObjectId
             "location": {
                 "name": "Cafe Delight",
                 "address": "123 Main Street",
                 "city": "Lahore"
             },
             "eligibleCards": [
-                { "cardId": "676980b7202301f66242efd5" },
-                { "cardId": "676980b7202301f66242efd5" }
+                { "cardId": "677539c26668532c16e10d7a" },
+                { "cardId": "677539c26668532c16e10d7a" }
             ]
         },
         {
@@ -136,14 +136,14 @@ async function addOffers() {
             "startDate": "2024-12-15T00:00:00Z",
             "endDate": "2024-12-31T23:59:59Z",
             "description": "Enjoy 30% off on annual memberships.",
-            "category": ["676ebeac416f24332abd76aa"], // Replace with actual category ObjectId
+            "category": ["677539c26668532c16e10d7f"], // Replace with actual category ObjectId
             "location": {
                 "name": "Health & Wellness Gym",
                 "address": "456 Elm Street",
                 "city": "Karachi"
             },
             "eligibleCards": [
-                { "cardId": "676980b7202301f66242efd7" }
+                { "cardId": "677539c26668532c16e10d7c" }
             ]
         },
         {
@@ -152,14 +152,14 @@ async function addOffers() {
             "startDate": "2024-12-01T00:00:00Z",
             "endDate": "2025-01-31T23:59:59Z",
             "description": "25% off on luxury suites for the winter season.",
-            "category": ["676ebeac416f24332abd76ac"], // Replace with actual category ObjectId
+            "category": ["677539c26668532c16e10d81"], // Replace with actual category ObjectId
             "location": {
                 "name": "Grand Plaza Hotel",
                 "address": "789 Maple Avenue",
                 "city": "Islamabad"
             },
             "eligibleCards": [
-                { "cardId": "676980b7202301f66242efd5" }
+                { "cardId": "677539c26668532c16e10d7a" }
             ]
         },
         {
@@ -168,14 +168,14 @@ async function addOffers() {
             "startDate": "2025-01-01T00:00:00Z",
             "endDate": "2025-01-10T23:59:59Z",
             "description": "15% off on electronics and gadgets.",
-            "category": ["676ebeac416f24332abd76ad"], // Replace with actual category ObjectId
+            "category": ["677539c26668532c16e10d82"], // Replace with actual category ObjectId
             "location": {
                 "name": "Tech World",
                 "address": "101 Tech Park",
                 "city": "Faisalabad"
             },
             "eligibleCards": [
-                { "cardId": "676980b7202301f66242efd5" }
+                { "cardId": "677539c26668532c16e10d7a" }
             ]
         }
     ]
@@ -342,7 +342,10 @@ app.get('/categories/category', async (req, res) => {
 
 // Start the server
 connectDB().then(() => {
-    // addOffers(); // Add bank on successful DB connection
+  // addBank();
+   // add_Category();
+    //addUser();
+    //addOffers(); // Add bank on successful DB connection
     app.listen(3000, () => {
         console.log("Server running on http://localhost:3000");
     });

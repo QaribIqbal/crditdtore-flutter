@@ -45,11 +45,60 @@ class MyApp extends StatelessWidget {
       title: 'Credit App',
       theme: ThemeData(
         primarySwatch: Colors.blue,
+        
       ),
+      
       debugShowCheckedModeBanner: false,
       home:// const LoginScreen(),
-      DiscountOffersScreen(),
+    // const DiscountOffersScreen(),
     //const CardListScreen(),
+    const MainScreen(),
     );
+    
   }
 }
+ class MainScreen extends StatefulWidget{
+  const MainScreen({super.key});
+ @override 
+ MainScreenState createState()=> MainScreenState();  
+ }
+  class MainScreenState extends State<MainScreen>{
+  int selectedindex=0;
+  //list of screen navigation
+  static final List<Widget> screens =[
+    const DiscountOffersScreen(),
+    const CardListScreen(),
+    const AddCardScreen(),
+  ];
+//navigation bar working 
+void onItemTapped(int index){
+setState(() {
+  selectedindex=index;
+});
+}
+
+@override
+  Widget build(BuildContext context){
+    return Scaffold(
+      body: screens[selectedindex],
+     bottomNavigationBar: BottomNavigationBar(items: const <BottomNavigationBarItem>[
+       BottomNavigationBarItem(
+         icon: Icon(Icons.local_offer),
+         label: 'Offers',
+       ),
+       BottomNavigationBarItem(
+         icon: Icon(Icons.credit_card),
+         label: 'My Cards',
+       ),
+       BottomNavigationBarItem(
+         icon: Icon(Icons.add),
+         label: 'Add Card',
+       ),
+     ],
+     currentIndex: selectedindex,
+     selectedItemColor: Colors.blue,
+     onTap: onItemTapped,
+    )
+    );
+  }
+  }

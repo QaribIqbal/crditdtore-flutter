@@ -72,11 +72,14 @@ class CardListScreenState extends State<CardListScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Your Cards'),
+        title: const Text('Your Cards',
+        style:TextStyle(color: Colors.white)),
         automaticallyImplyLeading: false,
+        backgroundColor: Colors.blue,
         actions: [
           IconButton(
             icon: const Icon(Icons.add),
+            color: Colors.white,
             onPressed: () async {
               // Navigate to AddCardScreen and refresh data after return
               await Navigator.push(
