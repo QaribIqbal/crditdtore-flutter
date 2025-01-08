@@ -1,9 +1,6 @@
-import 'package:credit_app/add_card_screen.dart';
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart'; // Add Firestore import
-import 'card_list_screen.dart'; // Replace with your project's name
-import 'login_screen.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class RegistrationScreen extends StatefulWidget {
   const RegistrationScreen({super.key});
@@ -13,11 +10,67 @@ class RegistrationScreen extends StatefulWidget {
 }
 
 class RegistrationScreenState extends State<RegistrationScreen> {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _fullNameController = TextEditingController();
+  final TextEditingController _phoneNumberController = TextEditingController();
   final TextEditingController _cityController = TextEditingController();
+
   String? _registrationMessage;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Register')),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              TextField(
+                controller: _fullNameController,
+                decoration: const InputDecoration(labelText: 'Full Name'),
+              ),
+              TextField(
+                controller: _emailController,
+                decoration: const InputDecoration(labelText: 'Email'),
+              ),
+              TextField(
+                controller: _passwordController,
+                obscureText: true,
+                decoration: const InputDecoration(labelText: 'Password'),
+              ),
+              TextField(
+                controller: _phoneNumberController,
+                decoration: const InputDecoration(labelText: 'Phone Number'),
+              ),
+              TextField(
+                controller: _cityController,
+                decoration: const InputDecoration(labelText: 'City'),
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: _register,
+                child: const Text('Register'),
+              ),
+              const SizedBox(height: 20),
+              if (_registrationMessage != null) ...[
+                Text(
+                  _registrationMessage!,
+                  style: TextStyle(
+                    color: _registrationMessage!.contains('successfully')
+                        ? Colors.green
+                        : Colors.red,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
   Future<void> _register() async {
     setState(() {
@@ -25,99 +78,33 @@ class RegistrationScreenState extends State<RegistrationScreen> {
     });
 
     try {
-      // Register the user with email and password
-      UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
-        email: _emailController.text,
-        password: _passwordController.text,
+      final response = await http.post(
+        Uri.parse('http://localhost:3000/register'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'name': _fullNameController.text,
+          'email': _emailController.text,
+          'password': _passwordController.text,
+          'phoneNumber': _phoneNumberController.text,
+          'city': _cityController.text,
+        }),
       );
 
-      // After user registration, save the city to Firestore
-      final user = userCredential.user;
-      if (user != null) {
-        await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
-          'email': user.email,
-          'city': _cityController.text, // Save the city
-          'createdAt': FieldValue.serverTimestamp(),
-        });
+      final responseBody = jsonDecode(response.body);
 
-        if (mounted) {
-          // Navigate to AddCardScreen after successful registration
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const AddCardScreen()),
-          );
-        }
+      if (response.statusCode == 201) {
+        setState(() {
+          _registrationMessage = "Registration successful!";
+        });
+      } else {
+        setState(() {
+          _registrationMessage = "Registration failed: ${responseBody['error']}";
+        });
       }
-    } on FirebaseException catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${e.message}')),
-        );
-      }
-      setState(() {
-        _registrationMessage = "Registration failed: ${e.message}";
-      });
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Unexpected error: $e')),
-        );
-      }
       setState(() {
         _registrationMessage = "Unexpected error: $e";
       });
     }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Register')),
-      body: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Container(
-              margin: const EdgeInsets.only(top: 0, bottom: 20),
-              child: const Text(
-                "Register your account to access",
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-            ),
-            TextField(
-              controller: _emailController,
-              decoration: const InputDecoration(labelText: 'Email'),
-            ),
-            TextField(
-              controller: _passwordController,
-              obscureText: true,
-              decoration: const InputDecoration(labelText: 'Password'),
-            ),
-            TextField(
-              controller: _cityController,
-              decoration: const InputDecoration(labelText: 'City'),
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: _register,
-              child: const Text('Register'),
-            ),
-            const SizedBox(height: 20),
-            if (_registrationMessage != null) ...[
-              Text(
-                _registrationMessage!,
-                style: TextStyle(
-                  color: _registrationMessage == "Registering..."
-                      ? Colors.green
-                      : Colors.red,
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
   }
 }

@@ -12,6 +12,7 @@ class DiscountOffersScreen extends StatefulWidget {
 
 class _DiscountOffersScreenState extends State<DiscountOffersScreen> {
   final baseUrl = "http://localhost:3000";
+  static const userId="676ab3e27835727941172573";
   List<dynamic> offers = [];
   List<dynamic> filteredOffers = [];
   String selectedType = "";
@@ -39,9 +40,23 @@ class _DiscountOffersScreenState extends State<DiscountOffersScreen> {
   @override
   void initState() {
     super.initState();
-    fetchOffers();
+    _loadUserCity();
     fetchCategories();
     _loadBanks();
+  }
+  Future<void> _loadUserCity() async
+  {
+    try{
+    final response =await http.get(Uri.parse('$baseUrl/users/$userId/city'));
+    selectedCity=json.decode(response.body);
+    print(selectedCity);
+    fetchOffers();
+    }
+    catch(e)
+  {
+   print("User not found!");
+  }
+    
   }
 
   Future<void> _loadBanks() async {
@@ -189,6 +204,7 @@ class _DiscountOffersScreenState extends State<DiscountOffersScreen> {
   }
 
   void openFilterPopup() {
+    //_loadUserCity();
     showModalBottomSheet(
       context: context,
       builder: (context) {

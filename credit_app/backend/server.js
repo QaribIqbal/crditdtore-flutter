@@ -1,20 +1,28 @@
-const mongoose = require("mongoose");
-const express = require("express");
-const cors = require("cors"); // Import the CORS middleware
-const bankroute = require("./routes/banks.routes");
-const userroute = require("./routes/banks.routes");
-const app = express();
-
+import express from "express"; 
+import mongoose from "mongoose";
+import cors from "cors"; // Import the CORS middleware
+import bankroute from "./routes/banks.routes.js";
+import userroute from "./routes/banks.routes.js"; 
+import authroute from "./routes/auth.routes.js";
+import dotenv from "dotenv"; 
+import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
+dotenv.config();
 // MongoDB URI (You can also add credentials if needed)
-const uri = "mongodb://127.0.0.1:27017/flutter"; // Directly using the DB name
-
+//const uri = "mongodb://127.0.0.1:27017/flutter"; // Directly using the DB name
+const uri = process.env.Mongo_URI;
+const app=express();
 // Use CORS middleware
 app.use(cors());
 app.use(express.json()); // Parse JSON bodies
+
+
+//Register user
+export
 // Mongoose connection
 async function connectDB() {
     try {
-        await mongoose.connect(uri, { useNewUrlParser: true, useUnifiedTopology: true });
+        await mongoose.connect(uri, { });
         console.log("MongoDB Connected");
     } catch (error) {
         console.error("Failed to connect to MongoDB", error);
@@ -22,10 +30,10 @@ async function connectDB() {
 }
 
 // Models
-const Bank = require("./models/bank");
-const User = require("./models/user");
-const Discount = require("./models/discount");
-const Category = require("./models/category");
+import Bank from "./models/bank.js";
+import User from "./models/user.js";
+import Discount from "./models/discount.js";
+import Category from "./models/category.js";
 //const bank_list = require("./controllers/banks.controller");
 
 // Demo data to check
@@ -48,7 +56,7 @@ async function addBank() {
             },
         ],
     });
-
+    
     try {
         await bank.save();
         console.log("Bank saved successfully");
@@ -100,16 +108,17 @@ async function addUser() {
         email: "example@gmail.com",
         password: "123456",
         mobileNumber: "03001234567",
+        city: "Lahore",
     }
-    )
-    try {
-        await user.save();
-        console.log("User saved successfully");
-        console.log(user);
-    }
-    catch (e) {
-        console.error("Error saving user", e);
-    }
+)
+try {
+    await user.save();
+    console.log("User saved successfully");
+    console.log(user);
+}
+catch (e) {
+    console.error("Error saving user", e);
+}
 }
 async function addOffers() {
     const offer = [
@@ -190,12 +199,13 @@ async function addOffers() {
 //Routes
 app.use("/", bankroute);
 app.use("/", userroute);
+app.use("/", authroute);
 //APIS
 //Get credit card list of selected bank
 app.get("/:id", async (req, res) => {
     try {
         const bankId = req.params.id;
-
+        
         const bank = await Bank.findById(bankId).select("creditCards");
         res.status(200).json(bank.creditCards);
     } catch (error) {
@@ -204,6 +214,7 @@ app.get("/:id", async (req, res) => {
 });
 
 //Save selected card of user
+
 
 app.post("/users/:userId/cards", async (req, res) => {
     const userId = req.params.userId;
@@ -313,40 +324,89 @@ app.get('/categories/category', async (req, res) => {
 
 //Fetching And filtering offers
 // app.get('/discounts/offers?category=type&location=city&card=id1,id2,id3', async (req, res) => {
-    app.get('/discounts/offers', async (req, res) => {
+app.get('/discounts/offers', async (req, res) => {
     const { category, location, card } = req.query;
-    const query={};
-    if(category)
-    {
-  //   query.category=category;
-  query.category= await Category.findOne({name:category}).select('_id');    
-}
-    if(location)
-        {
-         query["location.city"]=location;
-        }
-        if(card)
-        {
-            const cardIds=card.split(',');
-         query["eligibleCards.cardId"]={$in:cardIds};
-        }
+    const query = {};
+    if (category) {
+        //   query.category=category;
+        query.category = await Category.findOne({ name: category }).select('_id');
+    }
+    if (location) {
+        query["location.city"] = location;
+    }
+    if (card) {
+        const cardIds = card.split(',');
+        query["eligibleCards.cardId"] = { $in: cardIds };
+    }
     try {
-       const offers= await Discount.find(query);
-       res.status(200).json(offers);
+        const offers = await Discount.find(query);
+        res.status(200).json(offers);
     }
     catch (e) {
-  res.status(500).json({message: e.message});
+        res.status(500).json({ message: e.message });
     }
 
 });
+//Fetch user city
+app.get('/users/:userId/city', async (req, res) => {
+    const userId = req.params.userId;
+    try {
+        const city = await User.findById(userId).select('city');
+        res.status(200).json(city.city);
+    }
+    catch (e) {
+        res.status(500).json({ message: e.message });
+    }
+})
+const BaseUrl = process.env.BaseUrl;
+app.get('/config', (req, res) => {
+    try {
+      // Try to fetch the .env variables
+      res.status(200).json({
+        baseUrl: process.env.Base_Url,
+      });
+    } catch (err) {
+      console.error('Error while fetching config:', err);
+      res.status(500).json({ error: 'Server Error' });
+    }
+  });
+// app.post('/register', async (req, res) => {
+//     const { fullName, email, password, mobileNumber, city } = req.body;
+
+//     try {
+//         const UserExists = await User.findOne({ email });
+//         if (UserExists) {
+//             res.status(404).send("User already exists!");
+//         }
+//         const user = await User.create({ email, password, fullName, mobileNumber, city });
+//         if (user) {
+//             res.status(201).json({
+//                 id: user._id,
+//                 fullName: user.fullName,
+//                 email: user.email,
+//                 password: user.password,
+//                 mobileNumber: user.mobileNumber,
+//                 token: generateToken(user._id),
+//             });
+//             console.log("User created successfully!");
+//         }
+//     }
+//     catch (e) {
+//         res.status(500).send(`User can't be registered message!`);
+//     };
+
+//     console.log(e.message);
+// });
 
 // Start the server
 connectDB().then(() => {
-  // addBank();
-   // add_Category();
+    // addBank();
+    // add_Category();
     //addUser();
     //addOffers(); // Add bank on successful DB connection
     app.listen(3000, () => {
-        console.log("Server running on http://localhost:3000");
+        console.log(`Server running on ${BaseUrl}`);
     });
 });
+
+//console.log(require('crypto').randomBytes(64).toString('hex'));

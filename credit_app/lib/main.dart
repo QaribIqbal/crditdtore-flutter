@@ -4,22 +4,34 @@ import 'package:credit_app/discount_offers_screen.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'firebase_options.dart';
 import 'package:credit_app/login_screen.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-
-void main() async {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform,);
-
+ //await dotenv.load(); // Load the .env file
   // Fetch users when the app starts
   await fetchUsers();
-
+  await _loadConfig();
+WidgetsFlutterBinding.ensureInitialized();
   runApp(const MyApp());
 }
 
 // Function to fetch users from the backend
+Future<void> _loadConfig() async {
+  try {
+    final response = await http.get(Uri.parse('http://localhost:3000/config'));
+    if (response.statusCode == 200) {
+      final config = jsonDecode(response.body);
+      final String baseUrl = config['baseUrl'];
+      // Use the baseUrl in your API calls
+    }
+  } catch (e) {
+    print('Error loading config: $e');
+  }
+}
 Future<void> fetchUsers() async {
   try {
     final response = await http.get(Uri.parse('http://localhost:3000/users'));
@@ -49,10 +61,10 @@ class MyApp extends StatelessWidget {
       ),
       
       debugShowCheckedModeBanner: false,
-      home:// const LoginScreen(),
+      home: const LoginScreen(),
     // const DiscountOffersScreen(),
     //const CardListScreen(),
-    const MainScreen(),
+   // const MainScreen(),
     );
     
   }

@@ -1,5 +1,7 @@
-const Bank = require("../models/bank");
-const User = require("../models/user");
+// const Bank = require("../models/bank");
+// const User = require("../models/user");
+import Bank from '../models/bank.js';
+import User from '../models/user.js';
 const bank_list = async (req, res) => {
     try {
         const banks = await Bank.find();
@@ -21,7 +23,11 @@ const user_list =async (req, res) => {
 const creditCard_list = async (req, res) => {
 
 };
-module.exports = {
+// module.exports = {
+//     bank_list,
+//     user_list,
+// };
+export default  {
     bank_list,
     user_list,
-};
+}

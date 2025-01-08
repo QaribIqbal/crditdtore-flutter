@@ -1,7 +1,11 @@
-import 'package:credit_app/card_list_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import 'registration_screen.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'card_list_screen.dart';
+import 'main.dart';
+
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -10,7 +14,6 @@ class LoginScreen extends StatefulWidget {
 }
 
 class LoginScreenState extends State<LoginScreen> {
-   final FirebaseAuth _auth = FirebaseAuth.instance;
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   String? _signInMessage;
@@ -49,7 +52,9 @@ class LoginScreenState extends State<LoginScreen> {
                 onPressed: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => const RegistrationScreen()),
+                    MaterialPageRoute(
+                      builder: (context) => const RegistrationScreen(),
+                    ),
                   );
                 },
                 child: const Text('Register'),
@@ -72,45 +77,46 @@ class LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  
-     Future<void> _signIn() async {
+  Future<void> _signIn() async {
     setState(() {
+      //_loadConfig();
       _signInMessage = "Signing in...";
     });
 
     try {
-      await _auth.signInWithEmailAndPassword(
-        email: _emailController.text,
-        password: _passwordController.text,
+      // Replace with your backend API URL
+   //  final String baseUrl='${dotenv.env['BaseUrl']}';
+       String apiUrl = 'http://localhost:3000/login';
+        print(apiUrl);
+      final response = await http.post(
+        Uri.parse(apiUrl),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'email': _emailController.text.trim(),
+          'password': _passwordController.text.trim(),
+        }),
       );
-      if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const CardListScreen()), // Add const
-        );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const MainScreen(),
+            ),
+          );
+        }
+      } else {
+        final error = jsonDecode(response.body)['error'];
+        setState(() {
+          _signInMessage = "Sign in failed: $error";
+        });
       }
-    } on FirebaseException catch (e) {
-      // Specific handling for FirebaseException
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${e.message}')),
-        );
-      }
-      setState(() {
-        _signInMessage = "Sign in failed: ${e.message}";
-      });
     } catch (e) {
-      // Generic catch for other exceptions
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Unexpected error: $e')),
-        );
-      }
       setState(() {
         _signInMessage = "Unexpected error: $e";
       });
     }
   }
-
-
-  }
+}

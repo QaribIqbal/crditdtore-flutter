@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:convert';
 import 'package:credit_app/add_card_screen.dart';
 import 'package:flutter/material.dart';
@@ -14,35 +13,6 @@ class CardListScreen extends StatefulWidget {
 class CardListScreenState extends State<CardListScreen> {
   final String userId = "676ab3e27835727941172573"; // Replace with actual user ID
   final String baseUrl = "http://localhost:3000"; // Replace with your API base URL
-
-  late StreamController<List<Map<String, dynamic>>> _cardStreamController;
-  late Timer _pollingTimer;
-  List<Map<String, dynamic>> _userCards = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _cardStreamController = StreamController.broadcast();
-    _startPolling();
-  }
-
-  @override
-  void dispose() {
-    _pollingTimer.cancel();
-    _cardStreamController.close();
-    super.dispose();
-  }
-
-  void _startPolling() {
-    // Fetch data every 5 seconds
-    _pollingTimer = Timer.periodic(const Duration(seconds: 5), (_) async {
-      final cards = await fetchUserCards();
-      _cardStreamController.add(cards); // Add data to the stream
-      setState(() {
-        _userCards = cards;
-      });
-    });
-  }
 
   Future<List<Map<String, dynamic>>> fetchUserCards() async {
     try {
@@ -68,13 +38,27 @@ class CardListScreenState extends State<CardListScreen> {
     }
   }
 
+  Future<void> deleteCard(String id) async {
+    try {
+      final response = await http.delete(Uri.parse('$baseUrl/users/$userId/cards/$id'));
+      if (response.statusCode == 200) {
+        print("Card deleted successfully.");
+      } else {
+        print("Failed to delete card: ${response.body}");
+      }
+    } catch (e) {
+      print("Error deleting card: $e");
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Your Cards',
-        style:TextStyle(color: Colors.white)),
-        automaticallyImplyLeading: false,
+        title: const Text(
+          'Your Cards',
+          style: TextStyle(color: Colors.white),
+        ),
         backgroundColor: Colors.blue,
         actions: [
           IconButton(
@@ -86,14 +70,13 @@ class CardListScreenState extends State<CardListScreen> {
                 context,
                 MaterialPageRoute(builder: (context) => const AddCardScreen()),
               );
-              // Trigger manual refresh after adding a card
-              _pollingTimer.tick;
+              setState(() {}); // Trigger UI refresh
             },
           ),
         ],
       ),
-      body: StreamBuilder<List<Map<String, dynamic>>>(
-        stream: _cardStreamController.stream,
+      body: FutureBuilder<List<Map<String, dynamic>>>(
+        future: fetchUserCards(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
@@ -108,7 +91,6 @@ class CardListScreenState extends State<CardListScreen> {
           }
 
           final userCards = snapshot.data!;
-
           return ListView.builder(
             itemCount: userCards.length,
             itemBuilder: (context, index) {
@@ -135,9 +117,7 @@ class CardListScreenState extends State<CardListScreen> {
                     icon: const Icon(Icons.delete),
                     onPressed: () async {
                       await deleteCard(card['id']); // Call delete API
-                      setState(() {
-                        _userCards.removeWhere((element) => element['id'] == card['id']);
-                      });
+                      setState(() {}); // Refresh data after deletion
                     },
                   ),
                 ),
@@ -148,19 +128,4 @@ class CardListScreenState extends State<CardListScreen> {
       ),
     );
   }
-
-  Future<void> deleteCard(String id) async {
-    try {
-      final response = await http.delete(Uri.parse('$baseUrl/users/$userId/cards/$id'));
-      if (response.statusCode == 200) {
-        print("Card deleted successfully.");
-      } else {
-        print("Failed to delete card: ${response.body}");
-      }
-    } catch (e) {
-      print("Error deleting card: $e");
-    }
-  }
 }
-
-

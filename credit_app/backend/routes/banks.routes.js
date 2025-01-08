@@ -1,6 +1,10 @@
-const express = require('express');
+//const express = require('express');
+import express from 'express';
 const router = express.Router();
-const {bank_list, user_list} = require('../controllers/banks.controller');
+import controllers from '../controllers/banks.controller.js';
+const { bank_list, user_list } = controllers;
+// const {bank_list, user_list} = require('../controllers/banks.controller');
 router.get('/banks', bank_list);
 router.get('/users', user_list);
-module.exports = router;
+// module.exports = router;
+export default router;

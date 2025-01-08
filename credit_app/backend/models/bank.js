@@ -1,4 +1,4 @@
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 
 const CreditCardSchema = new mongoose.Schema({
   cardId: { type: mongoose.Schema.Types.ObjectId, auto: true },
@@ -16,4 +16,5 @@ const BankSchema = new mongoose.Schema({
 });
 
 const Bank = mongoose.model("Bank", BankSchema);
-module.exports = Bank;
+//module.exports = Bank;
+export default Bank;
